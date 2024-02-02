@@ -32,10 +32,10 @@
 
         Symbols {
             bindings = <
-&bt BT_CLR  &bt BT_SEL 0  &bt BT_SEL 1   &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4                                &none          &none         &none         &none  &none  &none
-&none       &none         &kp PIPE       &kp PLUS      &kp MINUS     &kp QMARK                                   &kp ASTERISK   &kp LS(LBRC)  &kp LS(RBRC)  &none  &none  &none
-&none       &none         &kp AMPERSAND  &kp ASTERISK  &kp SLASH     &kp EXCL                                    &kp EQUAL      &kp LS(LPAR)  &kp LS(RPAR)  &none  &none  &none
-&none       &none         &none          &none         &kp LT        &kp GT        &kp PAGE_UP    &kp PAGE_DOWN  &kp AMPERSAND  &kp LBKT      &kp RBKT      &none  &none  &none
+&bt BT_CLR  &bt BT_SEL 0  &bt BT_SEL 1   &bt BT_SEL 2  &bt BT_SEL 3  &bt BT_SEL 4                                &none          &none         &none         &none          &none  &none
+&none       &none         &kp PIPE       &kp PLUS      &kp MINUS     &kp QMARK                                   &kp ASTERISK   &kp LS(LBRC)  &kp LS(RBRC)  &none          &none  &none
+&none       &none         &kp AMPERSAND  &kp ASTERISK  &kp SLASH     &kp EXCL                                    &kp EQUAL      &kp LS(LPAR)  &kp LS(RPAR)  &none          &none  &none
+&none       &none         &none          &none         &kp LT        &kp GT        &kp PAGE_UP    &kp PAGE_DOWN  &kp AMPERSAND  &kp LBKT      &kp RBKT      &kp BACKSLASH  &none  &none
                                          &none         &none         &trans        &trans         &trans         &kp DEL        &none         &none
             >;
         };
