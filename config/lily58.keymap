@@ -11,7 +11,8 @@
 &mt
 { 
     flavor = "balanced";
-    require-prior-idle-ms = <200>;
+    tapping-term-ms = <300>;
+    require-prior-idle-ms = <150>;
 };
 
 / {
