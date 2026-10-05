@@ -24,7 +24,6 @@
       flavor = "balanced";
       tapping-term-ms = <100>;
       quick-tap-ms = <50>;
-      require-prior-idle-ms = <50>;
       bindings =  <&kp>, <&kp>;
     };
 
@@ -43,7 +42,7 @@
   combos {
     compatible = "zmk,combos";
     combo_F9 {
-      timeout-ms = <50>;
+      timeout-ms = <75>;
       key-positions = <53 54>;
       bindings = <&kp F9>;
       require-prior-idle-ms = <150>;
