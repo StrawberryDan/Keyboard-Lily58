@@ -46,6 +46,26 @@
 };
 
 
+/*
+ * Mod chords (needs the mod-chords ZMK fork, see config/west.yml).
+ *
+ * If home-row mods and one regular key all go down within timeout-ms, in any
+ * order, send the modified key without waiting on hold-tap timing. Only
+ * arms after require-prior-idle-ms without a key press, so typing rolls
+ * mid-word aren't turned into shortcuts.
+ */
+/ {
+  mod_chords {
+    compatible = "zmk,mod-chords";
+    mod-behaviors = <&hm>;
+    key-behaviors = <&kp>;
+    timeout-ms = <30>;
+    require-prior-idle-ms = <150>;
+    layers = <0>;
+  };
+};
+
+
 / {
   combos {
     compatible = "zmk,combos";
