@@ -23,6 +23,20 @@
 };
 
 
+#define HM_MULTI(label, mods) \
+    label: label { \
+      compatible = "zmk,behavior-macro-one-param"; \
+      #binding-cells = <1>; \
+      wait-ms = <10>; \
+      tap-ms = <10>; \
+      bindings \
+        = <&macro_press mods> \
+        , <&macro_param_1to1>, <&macro_tap &kp MACRO_PLACEHOLDER> \
+        , <&macro_pause_for_release> \
+        , <&macro_release mods> \
+        ; \
+    };
+
 / {
   behaviors {
     hm: homerow_mods {
@@ -42,8 +56,153 @@
       tapping-term-ms = <1000>;
       bindings = <&bootloader>, <&sys_reset>;
     };
+
+    // Used by the home-row-mod chord combos below: holds the modifier
+    // (param 1), taps the key (param 2), then keeps the modifier held until
+    // the combo is released. Combined with slow-release on the combo, this
+    // means you can keep the home-row key held and keep tapping other keys
+    // (e.g. Cmd+Tab Tab Tab, Ctrl+Z Z Z) and they'll still be modified.
+    hm_chord: home_row_mod_chord {
+      compatible = "zmk,behavior-macro-two-param";
+      #binding-cells = <2>;
+      wait-ms = <10>;
+      tap-ms = <10>;
+      bindings
+        = <&macro_param_1to1>, <&macro_press &kp MACRO_PLACEHOLDER>
+        , <&macro_param_2to1>, <&macro_tap &kp MACRO_PLACEHOLDER>
+        , <&macro_pause_for_release>
+        , <&macro_param_1to1>, <&macro_release &kp MACRO_PLACEHOLDER>
+        ;
+    };
+
+    // Same idea as hm_chord, but for chords with several home-row mods:
+    // one macro per modifier set, taking the key to tap as its parameter.
+    // Named by mods: a=Alt g=Gui/Cmd s=Shift c=Ctrl.
+    HM_MULTI(hm_ag, &kp LALT &kp LGUI)
+    HM_MULTI(hm_as, &kp LALT &kp LSHIFT)
+    HM_MULTI(hm_ac, &kp LALT &kp LCTRL)
+    HM_MULTI(hm_gs, &kp LGUI &kp LSHIFT)
+    HM_MULTI(hm_gc, &kp LGUI &kp LCTRL)
+    HM_MULTI(hm_sc, &kp LSHIFT &kp LCTRL)
+    HM_MULTI(hm_ags, &kp LALT &kp LGUI &kp LSHIFT)
+    HM_MULTI(hm_agc, &kp LALT &kp LGUI &kp LCTRL)
+    HM_MULTI(hm_asc, &kp LALT &kp LSHIFT &kp LCTRL)
+    HM_MULTI(hm_gsc, &kp LGUI &kp LSHIFT &kp LCTRL)
+    HM_MULTI(hm_agsc, &kp LALT &kp LGUI &kp LSHIFT &kp LCTRL)
   };
 };
+
+
+/*
+ * Home-row-mod chords.
+ *
+ * If one or more home-row mod keys and another (non-mod-tap) key all go
+ * down within HMC_TIMEOUT_MS of the first press, in any order, send the
+ * modified key, skipping the hold-tap's timing decision entirely.
+ *
+ * HMC_IDLE_MS keeps these combos switched off mid-typing: they only arm if
+ * no other key was pressed in the previous HMC_IDLE_MS, so fast rolls inside
+ * words (e.g. "fr", "so") aren't turned into shortcuts.
+ */
+#define HMC_TIMEOUT_MS 30
+#define HMC_IDLE_MS 150
+
+#define HMC_ONE(id, mod_positions, behavior, name, pos, kc) \
+    hmc_##id##_##name { \
+      timeout-ms = <HMC_TIMEOUT_MS>; \
+      require-prior-idle-ms = <HMC_IDLE_MS>; \
+      slow-release; \
+      layers = <0>; \
+      key-positions = <mod_positions pos>; \
+      bindings = <behavior kc>; \
+    };
+
+// Home-row mod positions: A=25 S=26 D=27 F=28 | J=31 K=32 L=33 ;=34
+//
+// Single-mod chords keep the exact (left/right) modifier of the key.
+// Multi-mod chords cover every set of 2-4 *different* modifiers, using
+// either hand's key for each, and always send the left-hand modifiers.
+#define HMC(name, pos, kc) \
+    HMC_ONE(lalt,   25, &hm_chord LEFT_ALT,  name, pos, kc) \
+    HMC_ONE(lmeta,  26, &hm_chord LEFT_META, name, pos, kc) \
+    HMC_ONE(lshift, 27, &hm_chord LSHIFT,    name, pos, kc) \
+    HMC_ONE(lctrl,  28, &hm_chord LCTRL,     name, pos, kc) \
+    HMC_ONE(rctrl,  31, &hm_chord RCTRL,     name, pos, kc) \
+    HMC_ONE(rshift, 32, &hm_chord RSHIFT,    name, pos, kc) \
+    HMC_ONE(rmeta,  33, &hm_chord RMETA,     name, pos, kc) \
+    HMC_ONE(ralt,   34, &hm_chord RALT,      name, pos, kc) \
+    HMC_ONE(a_s, 25 26, &hm_ag, name, pos, kc) \
+    HMC_ONE(a_l, 25 33, &hm_ag, name, pos, kc) \
+    HMC_ONE(s_scln, 26 34, &hm_ag, name, pos, kc) \
+    HMC_ONE(l_scln, 33 34, &hm_ag, name, pos, kc) \
+    HMC_ONE(a_d, 25 27, &hm_as, name, pos, kc) \
+    HMC_ONE(a_k, 25 32, &hm_as, name, pos, kc) \
+    HMC_ONE(d_scln, 27 34, &hm_as, name, pos, kc) \
+    HMC_ONE(k_scln, 32 34, &hm_as, name, pos, kc) \
+    HMC_ONE(a_f, 25 28, &hm_ac, name, pos, kc) \
+    HMC_ONE(a_j, 25 31, &hm_ac, name, pos, kc) \
+    HMC_ONE(f_scln, 28 34, &hm_ac, name, pos, kc) \
+    HMC_ONE(j_scln, 31 34, &hm_ac, name, pos, kc) \
+    HMC_ONE(s_d, 26 27, &hm_gs, name, pos, kc) \
+    HMC_ONE(s_k, 26 32, &hm_gs, name, pos, kc) \
+    HMC_ONE(d_l, 27 33, &hm_gs, name, pos, kc) \
+    HMC_ONE(k_l, 32 33, &hm_gs, name, pos, kc) \
+    HMC_ONE(s_f, 26 28, &hm_gc, name, pos, kc) \
+    HMC_ONE(s_j, 26 31, &hm_gc, name, pos, kc) \
+    HMC_ONE(f_l, 28 33, &hm_gc, name, pos, kc) \
+    HMC_ONE(j_l, 31 33, &hm_gc, name, pos, kc) \
+    HMC_ONE(d_f, 27 28, &hm_sc, name, pos, kc) \
+    HMC_ONE(d_j, 27 31, &hm_sc, name, pos, kc) \
+    HMC_ONE(f_k, 28 32, &hm_sc, name, pos, kc) \
+    HMC_ONE(j_k, 31 32, &hm_sc, name, pos, kc) \
+    HMC_ONE(a_s_d, 25 26 27, &hm_ags, name, pos, kc) \
+    HMC_ONE(a_s_k, 25 26 32, &hm_ags, name, pos, kc) \
+    HMC_ONE(a_d_l, 25 27 33, &hm_ags, name, pos, kc) \
+    HMC_ONE(a_k_l, 25 32 33, &hm_ags, name, pos, kc) \
+    HMC_ONE(s_d_scln, 26 27 34, &hm_ags, name, pos, kc) \
+    HMC_ONE(s_k_scln, 26 32 34, &hm_ags, name, pos, kc) \
+    HMC_ONE(d_l_scln, 27 33 34, &hm_ags, name, pos, kc) \
+    HMC_ONE(k_l_scln, 32 33 34, &hm_ags, name, pos, kc) \
+    HMC_ONE(a_s_f, 25 26 28, &hm_agc, name, pos, kc) \
+    HMC_ONE(a_s_j, 25 26 31, &hm_agc, name, pos, kc) \
+    HMC_ONE(a_f_l, 25 28 33, &hm_agc, name, pos, kc) \
+    HMC_ONE(a_j_l, 25 31 33, &hm_agc, name, pos, kc) \
+    HMC_ONE(s_f_scln, 26 28 34, &hm_agc, name, pos, kc) \
+    HMC_ONE(s_j_scln, 26 31 34, &hm_agc, name, pos, kc) \
+    HMC_ONE(f_l_scln, 28 33 34, &hm_agc, name, pos, kc) \
+    HMC_ONE(j_l_scln, 31 33 34, &hm_agc, name, pos, kc) \
+    HMC_ONE(a_d_f, 25 27 28, &hm_asc, name, pos, kc) \
+    HMC_ONE(a_d_j, 25 27 31, &hm_asc, name, pos, kc) \
+    HMC_ONE(a_f_k, 25 28 32, &hm_asc, name, pos, kc) \
+    HMC_ONE(a_j_k, 25 31 32, &hm_asc, name, pos, kc) \
+    HMC_ONE(d_f_scln, 27 28 34, &hm_asc, name, pos, kc) \
+    HMC_ONE(d_j_scln, 27 31 34, &hm_asc, name, pos, kc) \
+    HMC_ONE(f_k_scln, 28 32 34, &hm_asc, name, pos, kc) \
+    HMC_ONE(j_k_scln, 31 32 34, &hm_asc, name, pos, kc) \
+    HMC_ONE(s_d_f, 26 27 28, &hm_gsc, name, pos, kc) \
+    HMC_ONE(s_d_j, 26 27 31, &hm_gsc, name, pos, kc) \
+    HMC_ONE(s_f_k, 26 28 32, &hm_gsc, name, pos, kc) \
+    HMC_ONE(s_j_k, 26 31 32, &hm_gsc, name, pos, kc) \
+    HMC_ONE(d_f_l, 27 28 33, &hm_gsc, name, pos, kc) \
+    HMC_ONE(d_j_l, 27 31 33, &hm_gsc, name, pos, kc) \
+    HMC_ONE(f_k_l, 28 32 33, &hm_gsc, name, pos, kc) \
+    HMC_ONE(j_k_l, 31 32 33, &hm_gsc, name, pos, kc) \
+    HMC_ONE(a_s_d_f, 25 26 27 28, &hm_agsc, name, pos, kc) \
+    HMC_ONE(a_s_d_j, 25 26 27 31, &hm_agsc, name, pos, kc) \
+    HMC_ONE(a_s_f_k, 25 26 28 32, &hm_agsc, name, pos, kc) \
+    HMC_ONE(a_s_j_k, 25 26 31 32, &hm_agsc, name, pos, kc) \
+    HMC_ONE(a_d_f_l, 25 27 28 33, &hm_agsc, name, pos, kc) \
+    HMC_ONE(a_d_j_l, 25 27 31 33, &hm_agsc, name, pos, kc) \
+    HMC_ONE(a_f_k_l, 25 28 32 33, &hm_agsc, name, pos, kc) \
+    HMC_ONE(a_j_k_l, 25 31 32 33, &hm_agsc, name, pos, kc) \
+    HMC_ONE(s_d_f_scln, 26 27 28 34, &hm_agsc, name, pos, kc) \
+    HMC_ONE(s_d_j_scln, 26 27 31 34, &hm_agsc, name, pos, kc) \
+    HMC_ONE(s_f_k_scln, 26 28 32 34, &hm_agsc, name, pos, kc) \
+    HMC_ONE(s_j_k_scln, 26 31 32 34, &hm_agsc, name, pos, kc) \
+    HMC_ONE(d_f_l_scln, 27 28 33 34, &hm_agsc, name, pos, kc) \
+    HMC_ONE(d_j_l_scln, 27 31 33 34, &hm_agsc, name, pos, kc) \
+    HMC_ONE(f_k_l_scln, 28 32 33 34, &hm_agsc, name, pos, kc) \
+    HMC_ONE(j_k_l_scln, 31 32 33 34, &hm_agsc, name, pos, kc)
 
 
 / {
@@ -62,6 +221,51 @@
 	  bindings = <&to 6>;
 	  require-prior-idle-ms = <150>;
     };
+
+    // Home-row-mod chords: every home-row mod with every non-mod-tap key
+    // on the Typing layer.
+    HMC(esc,   0, ESC)
+    HMC(n1,    1, N1)
+    HMC(n2,    2, N2)
+    HMC(n3,    3, N3)
+    HMC(n4,    4, N4)
+    HMC(n5,    5, N5)
+    HMC(n6,    6, N6)
+    HMC(n7,    7, N7)
+    HMC(n8,    8, N8)
+    HMC(n9,    9, N9)
+    HMC(n0,   10, N0)
+    HMC(grv,  11, GRAVE)
+    HMC(tab,  12, TAB)
+    HMC(q,    13, Q)
+    HMC(w,    14, W)
+    HMC(e,    15, E)
+    HMC(r,    16, R)
+    HMC(t,    17, T)
+    HMC(y,    18, Y)
+    HMC(u,    19, U)
+    HMC(i,    20, I)
+    HMC(o,    21, O)
+    HMC(p,    22, P)
+    HMC(minus,23, MINUS)
+    HMC(g,    29, G)
+    HMC(h,    30, H)
+    HMC(sqt,  35, SQT)
+    HMC(z,    37, Z)
+    HMC(x,    38, X)
+    HMC(c,    39, C)
+    HMC(v,    40, V)
+    HMC(b,    41, B)
+    HMC(pgup, 42, PAGE_UP)
+    HMC(pgdn, 43, PAGE_DOWN)
+    HMC(n,    44, N)
+    HMC(m,    45, M)
+    HMC(comma,46, COMMA)
+    HMC(dot,  47, DOT)
+    HMC(fslh, 48, FSLH)
+    HMC(bslh, 49, BACKSLASH)
+    HMC(spc,  54, SPACE)
+    HMC(bspc, 55, BACKSPACE)
   };
 };
 
